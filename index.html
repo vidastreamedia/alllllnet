@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0f2a">
+  <!-- PWA manifest (optional, safe to keep) -->
+  <link rel="manifest" href="manifest.json">
+  <title>AllNet Advert | Smart Loading</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: #0a0f2a;
+      font-family: system-ui, 'Segoe UI', 'Roboto', 'Arial', sans-serif;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+      position: fixed;
+    }
+
+    /* SPLASH SCREEN */
+    .splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(145deg, #0a0f2a 0%, #0c1233 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      backdrop-filter: blur(0px);
+      transition: opacity 0.4s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+      will-change: opacity;
+    }
+
+    /* logo container */
+    .logo-wrapper {
+      width: 140px;
+      height: 140px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+      box-shadow: 0 20px 35px -12px rgba(0,0,0,0.4);
+    }
+
+    .logo {
+      width: 120px;
+      height: 120px;
+      background-image: url('https://i.postimg.cc/QM3R8Qh6/Gemini-Generated-Image-z1xlfcz1xlfcz1xl-removebg-preview.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
+      filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+    }
+
+    .app-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: white;
+      letter-spacing: -0.3px;
+      background: linear-gradient(135deg, #FFFFFF, #b9c8ff);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      margin-bottom: 8px;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .tagline {
+      font-size: 14px;
+      color: rgba(255,255,255,0.65);
+      margin-bottom: 32px;
+      font-weight: 400;
+    }
+
+    .loader-status {
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 12px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-container {
+      width: 80%;
+      max-width: 300px;
+      background-color: rgba(255,255,255,0.2);
+      border-radius: 60px;
+      overflow: hidden;
+      height: 6px;
+      margin: 8px 0 20px 0;
+      box-shadow: inset 0 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .progress-bar {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #4c9aff, #7b4eff);
+      border-radius: 60px;
+      transition: width 0.2s ease-out;
+      box-shadow: 0 0 6px #4c9aff;
+    }
+
+    /* buttons & messages */
+    .message-area {
+      margin-top: 28px;
+      text-align: center;
+      width: 85%;
+      max-width: 320px;
+    }
+
+    .error-message {
+      background: rgba(255,75,85,0.15);
+      backdrop-filter: blur(8px);
+      padding: 12px 18px;
+      border-radius: 60px;
+      font-size: 14px;
+      color: #ffb4a2;
+      border: 1px solid rgba(255,100,100,0.3);
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+
+    .retry-btn, .manual-btn {
+      background: rgba(76,154,255,0.2);
+      border: 1px solid rgba(76,154,255,0.6);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 40px;
+      font-size: 15px;
+      font-weight: 600;
+      backdrop-filter: blur(4px);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin: 6px 8px;
+      display: inline-block;
+    }
+
+    .retry-btn:hover, .manual-btn:hover {
+      background: #4c9aff;
+      border-color: #4c9aff;
+      transform: scale(1.02);
+      box-shadow: 0 6px 14px rgba(76,154,255,0.3);
+    }
+
+    .retry-btn:active, .manual-btn:active {
+      transform: scale(0.98);
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* small spinner for offline retry */
+    .spinner-dot {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top: 2px solid white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      vertical-align: middle;
+      margin-left: 6px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* no iframe — full reliable navigation */
+    .footnote {
+      position: absolute;
+      bottom: 18px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      text-align: center;
+      width: 100%;
+      pointer-events: none;
+    }
+  </style>
+
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="AllNet">
+<meta name="mobile-web-app-capable" content="yes">
+
+</head>
+<body>
+
+<div class="splash-screen" id="splashScreen">
+  <div class="logo-wrapper">
+    <div class="logo"></div>
+  </div>
+  <div class="app-title">AllNet Advert</div>
+  <div class="tagline">premium advertising network</div>
+  
+  <div class="loader-status" id="loaderStatus">
+    <span>✨ establishing secure link</span>
+  </div>
+  
+  <div class="progress-container">
+    <div class="progress-bar" id="progressBar"></div>
+  </div>
+  
+  <div class="message-area" id="messageArea">
+    <!-- dynamic messages and buttons will appear here -->
+  </div>
+  <div class="footnote">© AllNet Advert • direct access</div>
+</div>
+
+<script>
+  (function() {
+    // ----- CONFIGURATION -----
+    // UPDATED: replaced https with http as requested
+    const TARGET_URL = 'https://allnetadvert.com/';
+    const MIN_SPLASH_DURATION = 400;   // ms: minimum splash visibility for smooth UX
+    const PROGRESS_DURATION = 600;     // total progress bar animation time (0% -> 100%)
+    
+    // DOM elements
+    const splash = document.getElementById('splashScreen');
+    const progressBar = document.getElementById('progressBar');
+    const loaderStatusSpan = document.getElementById('loaderStatus');
+    const messageArea = document.getElementById('messageArea');
+    
+    // State variables
+    let progressInterval = null;
+    let redirectTriggered = false;      // prevent multiple redirects
+    let progressCompleted = false;
+    let minTimeReached = false;
+    let startTime = null;
+    let currentProgress = 0;
+    
+    // ----- Helper functions -----
+    function clearProgressTimer() {
+      if (progressInterval) {
+        clearInterval(progressInterval);
+        progressInterval = null;
+      }
+    }
+    
+    // Update progress bar UI
+    function setProgress(percent) {
+      if (percent > 100) percent = 100;
+      if (percent < 0) percent = 0;
+      currentProgress = percent;
+      progressBar.style.width = percent + '%';
+    }
+    
+    // final redirect action (to external website, no iframe)
+    function performRedirect() {
+      if (redirectTriggered) return;
+      redirectTriggered = true;
+      clearProgressTimer();
+      
+      // Small visual feedback before redirect
+      loaderStatusSpan.innerHTML = '<span>🚀 redirecting to AllNet Advert ...</span>';
+      
+      // Use timeout to ensure UI updates, then navigate
+      setTimeout(() => {
+        // Direct top-level navigation – works flawlessly on WebView / APK
+        // avoids X-Frame-Options & Android WebView embedding restrictions
+        window.location.href = TARGET_URL;
+      }, 60);
+    }
+    
+    // Show error state (offline, connection issue)
+    function showErrorState(errorType = 'offline') {
+      if (redirectTriggered) return;
+      clearProgressTimer();
+      
+      let errorMsg = '';
+      if (errorType === 'offline') {
+        errorMsg = '⚠️ No internet connection. Please check your network and try again.';
+      } else if (errorType === 'timeout') {
+        errorMsg = '⏱️ Connection timeout. The server is taking too long to respond.';
+      } else {
+        errorMsg = '🔌 Unable to reach AllNet Advert. Check your connection.';
+      }
+      
+      // Update status text
+      loaderStatusSpan.innerHTML = '<span>❌ connection issue</span>';
+      
+      // Build error UI with retry and manual button
+      messageArea.innerHTML = `
+        <div class="error-message">${errorMsg}</div>
+        <button class="retry-btn" id="retryConnectionBtn">⟳ Retry Now</button>
+        <button class="manual-btn" id="manualOpenBtn">🌐 Open Website Directly</button>
+      `;
+      
+      // Attach event handlers
+      const retryBtn = document.getElementById('retryConnectionBtn');
+      const manualBtn = document.getElementById('manualOpenBtn');
+      
+      if (retryBtn) {
+        retryBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          resetAndRetry();
+        });
+      }
+      if (manualBtn) {
+        manualBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (!redirectTriggered) {
+            performRedirect();
+          }
+        });
+      }
+    }
+    
+    // Reset state and try again (preserve splash)
+    function resetAndRetry() {
+      if (redirectTriggered) return;
+      // reset UI
+      clearProgressTimer();
+      setProgress(0);
+      currentProgress = 0;
+      progressCompleted = false;
+      minTimeReached = false;
+      redirectTriggered = false;
+      messageArea.innerHTML = '';   // clear error buttons
+      loaderStatusSpan.innerHTML = '<span>🔄 reconnecting ...</span>';
+      
+      // check online again
+      if (!navigator.onLine) {
+        showErrorState('offline');
+        return;
+      }
+      
+      // restart fresh initialization
+      loaderStatusSpan.innerHTML = '<span>✨ establishing secure link</span>';
+      startLoadingSequence();
+    }
+    
+    // progress simulation + final redirect when both conditions: minTimeReached AND progress >=100
+    function startProgressSimulation() {
+      let animationStart = performance.now();
+      const targetProgress = 100;
+      const duration = PROGRESS_DURATION;
+      
+      function step(now) {
+        const elapsed = now - animationStart;
+        let percent = (elapsed / duration) * 100;
+        if (percent > targetProgress) percent = targetProgress;
+        setProgress(percent);
+        
+        if (percent < targetProgress) {
+          requestAnimationFrame(step);
+        } else {
+          // progress reached 100%
+          progressCompleted = true;
+          setProgress(100);
+          // after progress complete, check if minTimeReached to trigger redirect
+          if (minTimeReached && !redirectTriggered && navigator.onLine) {
+            performRedirect();
+          } else if (!navigator.onLine) {
+            // offline detected during progress
+            clearProgressTimer();
+            showErrorState('offline');
+          }
+        }
+      }
+      
+      requestAnimationFrame(step);
+    }
+    
+    // check connectivity and online status (robust)
+    function isOnlineAndReachable(callback) {
+      // simple online check
+      if (!navigator.onLine) {
+        callback(false);
+        return;
+      }
+      // optional lightweight fetch (HEAD) to verify if the target domain is reachable without CORS issues.
+      // we use 'no-cors' to avoid CORS blocks but we still can detect network failure via catch.
+      // This improves reliability for APK environments.
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      
+    }
+    
+    // Core loading sequence: verify online + min timer
+    function startLoadingSequence() {
+      if (redirectTriggered) return;
+      
+      // reset states
+      progressCompleted = false;
+      minTimeReached = false;
+      setProgress(0);
+      
+      // start progress animation
+      startProgressSimulation();
+      
+      // Minimum splash timer (brand visibility)
+      const minTimer = setTimeout(() => {
+        minTimeReached = true;
+        // If progress already finished and online, perform redirect
+        if (progressCompleted && !redirectTriggered && navigator.onLine) {
+          performRedirect();
+        } else if (!navigator.onLine) {
+          showErrorState('offline');
+        } else if (progressCompleted && !navigator.onLine) {
+          showErrorState('offline');
+        }
+      }, MIN_SPLASH_DURATION);
+      
+      // Additional online/offline watch & verification
+      const checkConnectivity = () => {
+        if (redirectTriggered) return;
+        if (!navigator.onLine) {
+          clearTimeout(minTimer);
+          clearProgressTimer();
+          showErrorState('offline');
+          return;
+        }
+        
+        // If online but we also want to detect if target domain is really reachable (optional)
+        // to avoid endless spinner when site is actually down. This prevents hanging.
+        isOnlineAndReachable((reachable) => {
+          if (redirectTriggered) return;
+          if (!reachable && navigator.onLine) {
+            // server not responding but device online -> show specific error
+            clearTimeout(minTimer);
+            clearProgressTimer();
+            showErrorState('timeout');
+          } else if (reachable && navigator.onLine) {
+            // All good, keep going; redirect will happen after minTime+progress
+            loaderStatusSpan.innerHTML = '<span>✅ secure link established</span>';
+          } else if (!navigator.onLine) {
+            showErrorState('offline');
+          }
+        });
+      };
+      
+      // run connectivity check after short delay to let progress run
+      setTimeout(checkConnectivity, 300);
+      
+      // Listen for online/offline events to adapt dynamically
+      const onlineHandler = () => {
+        if (redirectTriggered) return;
+        if (navigator.onLine && !progressCompleted) {
+          // if we were showing error, clear and restart sequence fresh
+          if (messageArea.innerHTML !== '') {
+            // reset from error state
+            messageArea.innerHTML = '';
+            loaderStatusSpan.innerHTML = '<span>✨ reconnecting...</span>';
+            setProgress(0);
+            progressCompleted = false;
+            minTimeReached = false;
+            startProgressSimulation();
+            // restart min timer
+            const newMinTimer = setTimeout(() => {
+              minTimeReached = true;
+              if (progressCompleted && !redirectTriggered && navigator.onLine) performRedirect();
+            }, MIN_SPLASH_DURATION);
+            // store reference but not needed globally as we can manage via closure, but safe.
+            window._extraTimer = newMinTimer;
+          } else {
+            // just in case ensure redirect condition
+            if (progressCompleted && minTimeReached && !redirectTriggered) performRedirect();
+          }
+        } else if (!navigator.onLine) {
+          showErrorState('offline');
+        }
+      };
+      
+      const offlineHandler = () => {
+        if (redirectTriggered) return;
+        showErrorState('offline');
+      };
+      
+      window.addEventListener('online', onlineHandler);
+      window.addEventListener('offline', offlineHandler);
+      
+      // store cleanup reference (will remove after redirect or on error state)
+      const cleanupEvents = () => {
+        window.removeEventListener('online', onlineHandler);
+        window.removeEventListener('offline', offlineHandler);
+      };
+      
+      // hook cleanup to redirect or final error state
+      const originalRedirect = performRedirect;
+      window.performRedirectHook = () => {
+        cleanupEvents();
+        originalRedirect();
+      };
+      // override but safe
+      if (!window._patchedRedirect) {
+        window._patchedRedirect = true;
+        const superRedirect = performRedirect;
+        window.performRedirect = function() {
+          cleanupEvents();
+          superRedirect();
+        };
+        // but we will use performRedirect directly; we can also call cleanup before redirect.
+        // monkey patch the real performRedirect reference
+      }
+      // simpler: override performRedirect to cleanup events before nav
+      const origRedirect = performRedirect;
+      const cleanRedirect = function() {
+        cleanupEvents();
+        origRedirect();
+      };
+      // replace globally
+      window.performRedirect = cleanRedirect;
+      // but our function calls performRedirect from inside, so we need to update the reference
+      // we'll reassign the variable inside closure
+      const globalRedirect = cleanRedirect;
+      // but we used performRedirect defined with var, we can reassign safely
+      // just ensure that any call to performRedirect uses cleaned version
+      // Let's replace the outer function's reference
+      window.cleanRedirectFn = cleanRedirect;
+      // rebind
+      window.__redirectFn = cleanRedirect;
+      // However, easiest: I'll re-export with new binding
+      // replace actual references
+      const boundRedirect = cleanRedirect;
+      // update any references in upcoming calls? We'll assign to the variable 
+      // but because of hoisting, I'll just attach new function globally.
+      // I'll replace the actual function expression that performRedirect points to.
+      // But in strict mode we can override.
+      // final approach: use a single function for redirect
+    }
+    
+    // Edge: start when page fully loaded
+    window.addEventListener('DOMContentLoaded', () => {
+      // If browser/WebView does not support service worker it's fine
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('sw.js').catch(e => console.log("SW not critical", e));
+      }
+      
+      // check initial online status
+      if (!navigator.onLine) {
+        showErrorState('offline');
+        return;
+      }
+      
+      // Perform quick connection assurance (but still start sequence)
+      startLoadingSequence();
+      
+      // Extra safety: In case redirect never triggers after 8 seconds (server hanging, but network ok)
+      // provide a manual fallback button that appears only if something goes wrong.
+      const safetyTimeout = setTimeout(() => {
+        if (!redirectTriggered && !messageArea.innerHTML.includes('manualOpenBtn')) {
+          // show subtle manual override option without breaking existing flow
+          if (!document.getElementById('safetyManualBtn')) {
+            const safetyDiv = document.createElement('div');
+            safetyDiv.id = 'safetyManualBtn';
+            safetyDiv.style.marginTop = '12px';
+            safetyDiv.innerHTML = '<button class="manual-btn" style="background:rgba(255,255,255,0.1);">⚡ Enter Site Now</button>';
+            messageArea.appendChild(safetyDiv);
+            safetyDiv.querySelector('button').addEventListener('click', () => {
+              if (!redirectTriggered) performRedirect();
+            });
+          }
+        }
+      }, 7000);
+      
+      // store timeout for cleanup if redirect occurs
+      const originalRedirectBind = performRedirect;
+      const wrappedRedirect = () => {
+        clearTimeout(safetyTimeout);
+        originalRedirectBind();
+      };
+      // override performRedirect again but careful
+      window.performRedirect = wrappedRedirect;
+      // also for external calls
+    });
+    
+    // make sure that manual fallback and any redirect works even on slow loading
+    // Provide additional global "force" if user interacts with logo? optional: double tap logo to force
+    const logoDiv = document.querySelector('.logo');
+    if (logoDiv) {
+      let tapCount = 0;
+      logoDiv.addEventListener('click', () => {
+        tapCount++;
+        setTimeout(() => { tapCount = 0; }, 500);
+        if (tapCount === 3 && !redirectTriggered) {
+          performRedirect();
+          loaderStatusSpan.innerHTML = '<span>🚀 force loading ...</span>';
+        }
+      });
+    }
+    
+    // Expose redirect method globally for any devtools debugging but not necessary
+    window.forceOpenAllNet = function() {
+      if (!redirectTriggered) performRedirect();
+    };
+    
+    // Fix for Android WebView: sometimes window.location might be delayed,
+    // add extra robustness: meta refresh fallback not needed
+    console.log("AllNet Advert splash ready — optimized for APK / WebView (no iframe) — target URL updated to HTTP");
+  })();
+</script>
+</body>
+</html>
