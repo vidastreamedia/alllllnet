@@ -1,0 +1,27 @@
+{
+  "background_color": "#ffffff",
+  "description": "\nList of all postings in Allnetadvert",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Allnetadvert",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Allnetadvert",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "icons": [
+    {
+      "src": "https://allnetadvert.com/images/Allnet_Fevicon_Logo.jpg",
+      "type": "image/jpeg",
+      "sizes": "103x107",
+      "isSquare": false,
+      "isPng": false,
+      "isWebp": false,
+      "isJpg": true,
+      "width": 103,
+      "is512x512": false,
+      "is256x256": false,
+      "is192x192": false
+    }
+  ]
+}
